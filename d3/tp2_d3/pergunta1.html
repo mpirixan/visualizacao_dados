@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <script type="text/javascript" src="https://d3js.org/d3.v6.js"></script>
+        <script>
+        let width = 500;
+        let height = 300;
+        let margin = 50;
+        
+        function draw(data) {
+            // Reuse the visualization code from scatterplot
+            // Change d[0] and d[1] as specified below
+        let y_extent = d3.extent(data, d => d.2000);
+
+        let y_scale = d3.scaleLinear()
+            .range([height - margin, margin])
+            .domain([0, y_extent[1]]); // adding 0 to let all points 
+    //have the same base
+
+        }
+    </script>
+    
+    </head>
+    
+<style type="text/css">
+    div.bar {
+	display: inline-block;
+	width: 20px;
+	height: 75px; /* Overriden by D3-assigned height on script */
+	margin-right: 2px;
+	background-color: teal;
+}
+</style>
+
+<body>
+
+
+    <script type="text/javascript"> 
+    let svg = d3.select('.div_d3').append('svg')
+        /*d3.csv("Americas_Quantity.csv").then(function(data)
+            .then(draw)
+            .catch(function(err){console.log(err)});
+    */
+    d3.csv("Americas_Quantity.csv").then(function(data){
+        
+        d3.select("body").selectAll("div")
+        .data(data)
+        .join("div")
+        .attr("class", "bar");
+        
+        for (var i = 0; i < data.length; i++) {
+            console.log(data[2]);
+            console.log(data[1].Trade_flow);
+            console.log(data[1].Commodity);
+             
+        }
+        for (var i = 0; i < data.length; i++) {
+            console.log(data[2]);
+            console.log(data[0].Trade_flow);
+            console.log(data[0].Commodity);
+             
+        }
+    function draw(data) {
+    }    
+    });
+    
+
+             
+    </script>
+</body>
