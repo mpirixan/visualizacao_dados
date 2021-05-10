@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Aiai</title>
+    <meta charset="utf-8">
+    <script src="https://d3js.org/d3.v6.js"></script>
+    <style>
+    </style>
+</head>
+
+<body>
+    <div> Aquicultura</div>
+    <div class="container">
+        <div class="container-item">
+            <div id="map" class="vis"></div>
+            <div id="tipos" class="vis"></div>
+            <div id="objeto" class="vis"></div>
+        </div>
+        <!-- <canvas id="myCanvas" width="500", height="500"></canvas> -->
+
+        <div class="container-item">
+            <div id="anos" class="vis"></div>
+            <div id="valor" class="vis"></div>
+        </div>
+    </div>
+
+</body>
+
+<script>
+
+
+
+    let vis = {};
+    let settings = {};
+    let mapData = [];
+    let AMquant = {};
+    let AMvalue = {};
+    let AFquant = {};
+    let AFvalue = {};
+    let ASquant = {};
+    let ASvalue = {};
+    let EUquant = {};
+    let EUvalue = {};
+    let OCquant = {};
+    let OCvalue = {};
+
+    let margin = 75,
+        width = 500 - margin,
+        height = 500 - margin;
+
+    Promise.all([d3.json("custom.geo.json"),           
+                d3.csv("Americas_Value.csv"),
+                d3.csv("Americas_Quantity.csv"),
+                d3.csv("Africa_Value.csv"),
+                d3.csv("Africa_Quantity.csv"),
+                d3.csv("Asia_Value.csv"),
+                d3.csv("Asia_Quantity.csv"),
+                d3.csv("Europe_Value.csv"),
+                d3.csv("Europe_Quantity.csv"),
+                d3.csv("Oceania_Value.csv"),
+                d3.csv("Oceania_Quantity.csv", preprocess )])
+                .then( results => {
+
+        mapData = results[0];
+        AMvalue = results[1];
+        AMquant = results[2];
+        AFvalue = results[3];
+        AFquant = results[4];
+        ASvalue = results[5];
+        ASquant = results[6];
+        EUvalue = results[7];
+        EUquant = results[8];
+        OCvalue = results[9];
+        OCquant = results[10];
+        
+        /*let svgAnos = d3.select("#anos")
+                .append("svg")
+                    .attr("width", width*1.6 + margin)
+                    .attr("height", height + margin)
+                    .attr('class', 'anos');
+        */
+       /*let svg_mapa = d3.select("body")
+            .append("svg")
+                .attr("width", width + margin)
+                .attr("height", height + margin)
+            .append('g')
+                .attr('class', 'bar');
+*/
+        let svg_vis1 = d3.select("body")
+            .append("svg")
+                .attr("width", width + margin)
+                .attr("height", height + margin)
+            .append('g')
+                .attr('class', 'map');
+/*
+        let svg_vis2 = d3.select("body")
+            .append("svg")
+                .attr("width", width + margin)
+                .attr("height", height + margin)
+            .append('g')
+                .attr('class', 'map');
+*/
+        loadMap( svg_vis1,mapData,AMquant,AMvalue)
+
+        loadMapAqua(svg_vis1, mapData, AMvalue,AMquant)
+    })
+
+    function preprocess(d) {
+            let p = {"Land Area": d["name"],
+            "Trade flow": d["Trade flow"],
+            "Commodity": d["Commodity"],
+            "2000": d["2000"],
+            "S_2000": d["S_2000"],
+            "2001": d["2001"],
+            "S_2001": d["S_2001"],
+            "2002": d["2002"],
+            "S_2002": d["S_2002"],
+            "2003": d["2003"],
+            "S_2003": d["S_2003"],
+            "2004": d["2004"],
+            "S_2004": d["S_2004"],
+            "2005": d["2005"],
+            "S_2005": d["S_2005"],
+            "2006": d["2006"],
+            "S_2006": d["S_2006"],
+            "2007": d["2007"],
+            "S_2007": d["S_2007"],
+            "2008": d["2008"],
+            "S_2008": d["S_2008"],
+            "2009": d["2009"],
+            "S_2009": d["S_2009"],
+            "2010": d["2010"],
+            "S_2010": d["S_2010"],
+            "2011": d["2011"],
+            "S_2011": d["S_2011"],
+            "2012": d["2012"],
+            "S_2012": d["S_2012"],
+            "2013": d["2013"],
+            "S_2013": d["S_2013"],
+            "2014": d["2014"],
+            "S_2014": d["S_2014"],
+            "2015": d["2015"],
+            "S_2015": d["S_2015"]
+            
+            };
+            return p;
+        }
+        function filterData(dataFull) {
+
+        let data = dataFull;
+            for ( let selection of [vis.map] ) {
+                if (selection.filterColumn != "") {
+                    let categorySelected = selection.data().find(d => d.selected)
+                    categorySelected =  categorySelected.properties ? 
+                        categorySelected["properties"]["name"]: categorySelected["y"];  //[selection.filterColumn]
+                    
+                    data = data.filter(d => d[selection.filterColumn] == categorySelected)
+                }
+            }
+        data.thr = dataFull.thr;
+            let d = generateData(data);
+
+            // let dataMedia = generateData(dataFull)[0];
+            let dataTipos = d[1], dataSituacao = d[2], dataValor = d[3];
+            // let color = d3.scaleLinear()
+            //     .range(["white", "DarkGreen"])
+            //     .domain(d3.extent(dataMedia, d => +d.value))
+
+            // let color_acc = d => color(dataMedia.find(u => u.UF === d.properties["UF_05"])["value"]);
+            // vis.map.attr("fill", color_acc);
+
+            vis.barsTipos.updateVis(dataTipos);
+            vis.barsSituacao.updateVis(dataSituacao);
+            vis.barsValor.updateVis(dataValor);
+        }
+        function generateData(data){
+            let dataMedia = Array.from(d3.rollup(data, 
+                leaves => d3.mean(leaves, l => l["Vigência Total"]),
+                d => d["name"]
+            )).map(d => ({
+                "value": d[1], // Média da vigência total
+                "name":d[0] // Estado
+            }));
+
+            let dataTipos = Array.from(d3.rollup(data, 
+                leaves => leaves.length,
+                d => d["Tipo Ente Convenente"])
+            ).map(d => ({
+                "x": d[1], // Contagem
+                "y":d[0] // Tipo de Ente
+            }));
+
+            let dataSituacao = Array.from(d3.rollup(data, 
+                leaves => d3.mean(leaves, l => l["Vigência Total"]),
+                d => d["Situação Convênio"])
+            ).map(d => ({
+                "x": d[1], // Média da vigência total
+                "y": d[0] // Tipo de Ente
+            }));
+
+            let dataValor = d3.bin().thresholds(data.thr)(data.map(d => d["Valor Convênio"])).map(
+                d => ({
+                    "x": d.x1, // Compartimento
+                    "y": d.length // Contagem
+                })
+            );
+            // console.log(dataSituacao)
+
+            return [dataMedia, dataTipos, dataSituacao, dataValor];
+        }
+        data.thr = dataFull.thr;
+let d = generateData(data);
+
+// let dataMedia = generateData(dataFull)[0];
+let dataCommodity = d[1], dataAnos = d[2], dataValor = d[3];
+// let color = d3.scaleLinear()
+//     .range(["white", "DarkGreen"])
+//     .domain(d3.extent(dataMedia, d => +d.value))
+
+// let color_acc = d => color(dataMedia.find(u => u.UF === d.properties["UF_05"])["value"]);
+// vis.map.attr("fill", color_acc);
+
+vis.barsTipos.updateVis(dataTipos);
+vis.barsSituacao.updateVis(dataAnos);
+vis.barsValor.updateVis(dataValor);
+
+    function loadMap(svg, geo_data, data){
+        console.log(geo_data)
+        let projection = d3.geoMercator()
+            .scale(80)
+            .translate([width / 2, height / 2]);
+
+        let path = d3.geoPath().projection(projection);
+
+        svg.selectAll("path")
+            .data(geo_data.features)
+            .join("path")
+            .attr("d", d => path(d))
+            .attr("fill", "steelblue")
+            .attr("stroke", "black")
+            .attr("id", d=> d.properties.name)
+            .attr("stroke-width", 1);
+
+        loadCircles(svg, projection, data);
+    }
+
+    function loadMapAqua(svg, geo_data, data, svgLine){
+        console.log(geo_data)
+        let projection = d3.geoMercator()
+            .scale(80)
+            .translate([width / 2, height / 2]);
+
+        let path = d3.geoPath().projection(projection);
+
+        let map = svg.selectAll("path")
+            .data(geo_data.features)
+            .join("path")
+            .attr("d", d => path(d))
+            .attr("fill", "steelblue")
+            .attr("stroke", "black")
+            .attr("id", d=> d.properties.name)
+            .attr("stroke-width", 1)
+            .on("mousedown", function(e, d) {
+                map.style("fill", "steelblue");
+                d3.select(this).style("fill","red");
+                let name = d.properties.geounit;
+                let selection = data.filter(d => d["Land Area"] == name);
+                   console.log(name);
+                  
+            }); 
+
+    }
+
+
+    function loadCircles(svg, projection, data) {
+        
+        let colorScale = d3.scaleOrdinal()
+                            .domain([...new Set(data.map(d => d.fall))])
+                            .range(["red", "green"])
+
+        svg.append('g')
+            .selectAll("circle")
+            .data(data)
+            .join("circle")
+                .attr("cx", d => projection([+d.reclong, +d.reclat])[0])
+                .attr("cy", d => projection([+d.reclong, +d.reclat])[1])
+                .attr("r", 2)
+                .style("opacity", .5)
+                .style("fill", d => colorScale(d.fall)); 
+    }
+</script>
+
+</html>
